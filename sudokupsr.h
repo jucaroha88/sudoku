@@ -19,9 +19,25 @@
 
 #define _ADJAC_ANCHO 81
 
+
+/* MACROS DE CONVERSION DE DIRECCIONES EN EL TABLERO
+ * la matriz del tablero de sudoku se puede direccionar de 3 maneras:
+ *
+ * 		-MATRIZ: una matriz de 9x9, direccionado como [fila][columna], indices empiezan en 0
+ * 		-VECTOR: un vector de 81, indice empieza en 0
+ * 		-CUADRANTES: el tablero esta dividido en 9 cuadrantes, cada uno de 9 casillas.
+ * 						se cuentan de izquierda a derecha, luego de arriba a abajo empezando por el cuadrante 0.
+ * 						asi tambien como las casillas que componen los cuadrantes
+ */
+
 #define mat_to_vec(fila,columna) ((fila)*_SUDOK_COLUMNAS + (columna))
 #define vec_to_fila(i) (((int)(i))/9)
 #define vec_to_columna(i) (((int)(i))%9)
+
+#define mat_to_cuad_n(fila,columna) (((fila)/3)*3+((columna)/3))
+#define mat_to_cuad_i(fila,columna) (((fila)%3)*3+((columna)%3))
+#define cuad_to_fila(n,i) ((n)/3+(i)/3)
+#define cuad_to_columna(n,i) (((n)%3)*3+((i)%3))
 
 typedef int bool;
 typedef int color;

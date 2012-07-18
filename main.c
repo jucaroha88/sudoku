@@ -7,7 +7,8 @@
 #include "sudokupsr.h"
 
 int main(int argc, char **argv){
-	inicializarMatrizAdyacencia();
-	imprimirMatrizAdyacencia();
+//	inicializarMatrizAdyacencia();
+//	imprimirMatrizAdyacencia();
+
 	return 0;
 }
