@@ -13,11 +13,14 @@
 #define true 1;
 #define false 0;
 
-#define _SUDOK_COLUMNAS 9
-#define _SUDOK_FILAS 9
-#define _SUDOK_COLORES 9
+#define _SUDOK_COLUMNAS 9 //cantidad de columnas
+#define _SUDOK_FILAS 9	//cantidad de filas
+#define _SUDOK_COLORES 9	//cantidad de colores
 
-#define _ADJAC_ANCHO 81
+#define _ADJAC_ANCHO 81 //ancho de la matriz de adjacencia (cantidad de elementos tambien)
+
+#define _SUDOK_CUADRANTES 9 //cantidad de cuadrantes
+#define _SUDOK_ELEMSCUADRANTE 9 //cantidad de elementos en un cuadrante
 
 
 /* MACROS DE CONVERSION DE DIRECCIONES EN EL TABLERO
@@ -64,7 +67,29 @@ void inicializarMatrizAdyacencia(){
 	int i,j;
 	for(i=0;i<_ADJAC_ANCHO;i++){
 		for(j=0;j<_ADJAC_ANCHO;j++){
-			matriz_adyacencia[i][j]=0;
+			matriz_adyacencia[i][j]=false;
+		}
+	}
+	{
+		int nodo,otrnodo,fila,columna,cuadr;
+		for(nodo=0;nodo<_ADJAC_ANCHO;nodo++){
+			//conectamos con toda su fila
+			fila=vec_to_fila(nodo);
+			for(columna=0;columna<_SUDOK_COLUMNAS;columna++){
+				otrnodo=mat_to_vec(fila,columna);
+				matriz_adyacencia[nodo][otrnodo]=true;
+			}
+			//y toda su columna
+			columna=vec_to_columna(nodo);
+			for(fila=0;fila<_SUDOK_FILAS;fila++){
+				otrnodo=mat_to_vec(fila,columna);
+				matriz_adyacencia[nodo][otrnodo]=true;
+			}
+			//y todo su cuadrante
+			cuadr=mat_to_cuad_n(vec_to_fila(nodo),vec_to_columna(nodo));
+			for(i=0;i<_SUDOK_ELEMSCUADRANTE;i++){
+				otrnodo=mat_to_vec(cuad_to_fila(cuadr,i),cuad_to_columna(cuadr,i));
+			}
 		}
 	}
 }
@@ -84,6 +109,16 @@ void asignarColor(int fila, int columna, color color, Nodo *nodo){
 	nodo->tablero[fila][columna]=color;
 	nodo->recorrido[fila][columna][color]=true;
 	//propagamos (por ahora solo comprobacion hacia adelante... mas adelante cambiamos esto por un algoritmo de propagacion)
+	//   -en la fila
+//	{
+//		int fil,col,nodo,otrnodo;
+//		nodo
+//		fil=fila;
+//		for(col=0;col<_SUDOK_FILAS;col++){
+//			nodo=mat_to_vec(fil,col);
+//
+//		}
+//	}
 
 }
 
