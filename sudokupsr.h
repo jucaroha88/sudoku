@@ -10,8 +10,8 @@
 
 #include <stdio.h>
 
-#define true 1;
-#define false 0;
+#define true 1
+#define false 0
 
 #define _SUDOK_COLUMNAS 9 //cantidad de columnas
 #define _SUDOK_FILAS 9	//cantidad de filas
@@ -47,8 +47,8 @@ typedef int color;
 
 bool matriz_adyacencia[_ADJAC_ANCHO][_ADJAC_ANCHO];
 
-
-struct Nodo{
+/* representa un nodo en el arbol de busqueda */
+struct NodoBusqueda{
 	color tablero[_SUDOK_FILAS][_SUDOK_COLUMNAS];
 	/* recorrido [fila][columna][color]
 	 * true o false segun si el nodo ya fue visitado o no
@@ -61,7 +61,44 @@ struct Nodo{
 	 */
 	bool asignable[_SUDOK_FILAS][_SUDOK_COLUMNAS][_SUDOK_COLORES+1];
 };
-typedef struct Nodo Nodo;
+typedef struct NodoBusqueda NodoBusqueda;
+
+//TODO hacer procedure para imprimir NodoBusqueda
+void printNodoBusqueda(NodoBusqueda *nodo){
+	int i,j;
+	printf("##TABLERO#\n");
+	for(i=0;i<_SUDOK_FILAS;i++){
+		if(!(i%3)) printf("\n");
+		printf("#");
+		for(j=0;j<_SUDOK_COLUMNAS;j++){
+			if(!(j%3)) printf(" ");
+			printf(" ");
+			printf("%d",nodo->tablero[i][j]);
+		}
+		printf(" #\n");
+	}
+	printf("#RECORRIDO\n");
+	for(i=0;i<_ADJAC_ANCHO;i++){
+		printf("#%d. ",i);
+		for(j=1;j<_SUDOK_COLORES+1;j++){
+			if(nodo->recorrido[vec_to_fila(i)][vec_to_columna(i)][j]==true){
+				printf("%d",j);
+			}
+		}
+		printf("\n");
+	}
+	printf("#ASIGNABLE\n");
+	for(i=0;i<_ADJAC_ANCHO;i++){
+		printf("#%d. ",i);
+		for(j=1;j<_SUDOK_COLORES+1;j++){
+			if(nodo->asignable[vec_to_fila(i)][vec_to_columna(i)][j]==true){
+				printf("%d",j);
+			}
+		}
+		printf("\n");
+	}
+	printf("##########");
+}
 
 void inicializarMatrizAdyacencia(){
 	int i,j;
@@ -85,7 +122,7 @@ void inicializarMatrizAdyacencia(){
 				otrnodo=mat_to_vec(fila,columna);
 				matriz_adyacencia[nodo][otrnodo]=true;
 			}
-			//y todo su cuadrante
+			//y todito su cuadrante
 			cuadr=mat_to_cuad_n(vec_to_fila(nodo),vec_to_columna(nodo));
 			for(i=0;i<_SUDOK_ELEMSCUADRANTE;i++){
 				otrnodo=mat_to_vec(cuad_to_fila(cuadr,i),cuad_to_columna(cuadr,i));
@@ -105,28 +142,25 @@ void imprimirMatrizAdyacencia(){
 }
 
 
-void asignarColor(int fila, int columna, color color, Nodo *nodo){
+void asignarColor(int fila, int columna, color color, NodoBusqueda *nodo){
+	int nronodo,i;
 	nodo->tablero[fila][columna]=color;
 	nodo->recorrido[fila][columna][color]=true;
 	//propagamos (por ahora solo comprobacion hacia adelante... mas adelante cambiamos esto por un algoritmo de propagacion)
-	//   -en la fila
-//	{
-//		int fil,col,nodo,otrnodo;
-//		nodo
-//		fil=fila;
-//		for(col=0;col<_SUDOK_FILAS;col++){
-//			nodo=mat_to_vec(fil,col);
-//
-//		}
-//	}
-
+	//usando la matriz de adjacencia
+	nronodo=mat_to_vec(fila,columna);
+	for(i=0;i<_ADJAC_ANCHO;i++){
+		if(matriz_adyacencia[nronodo][i] == true){
+			nodo->asignable[vec_to_fila(i)][vec_to_columna(i)][color]=false;
+		}
+	}
 }
 
-Nodo nodoInicial(int tablero[_SUDOK_FILAS][_SUDOK_COLUMNAS]){
+NodoBusqueda nodoInicial(int tablero[_SUDOK_FILAS][_SUDOK_COLUMNAS]){
 	int i,j,k,c;
-	Nodo newnodo;
+	NodoBusqueda newnodo;
 
-	//reseteamso recorrido y asignable del Nodo (nada fue recorrido y todo es asignable)
+	//reseteamso recorrido y asignable del Nodo (nada fue recorrido y todos son asignables)
 	for(i=0;i<_SUDOK_FILAS;i++){
 		for(j=0;j<_SUDOK_COLUMNAS;j++){
 			for(k=1;k<=_SUDOK_COLORES;k++){
@@ -135,7 +169,7 @@ Nodo nodoInicial(int tablero[_SUDOK_FILAS][_SUDOK_COLUMNAS]){
 			}
 		}
 	}
-
+	//copiamos los valores
 	for(i=0;i<_SUDOK_FILAS;i++){
 		for(j=0;j<_SUDOK_COLUMNAS;j++){
 			c=tablero[i][j];
@@ -147,6 +181,7 @@ Nodo nodoInicial(int tablero[_SUDOK_FILAS][_SUDOK_COLUMNAS]){
 					newnodo.recorrido[i][j][k]=true;
 		}
 	}
+	return newnodo;
 }
 
 #endif /* NODO_H_ */
