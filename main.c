@@ -17,13 +17,23 @@ int main(int argc, char **argv){
 												{5,7,0,0,9,0,0,0,0},
 												{0,0,0,7,5,0,0,0,0}
 											};
+
 	NodoBusqueda n;
+	int filselected,colselected;
 
 
 	inicializarMatrizAdyacencia();
-	//	imprimirMatrizAdyacencia();
+	imprimirMatrizAdyacencia();
+
+	imprimirAdyacentesApuntadosYApuntadores(4,5);
 
 	n = nodoInicial(ej);
+
+	if(seleccionarCasilla(&n,&filselected,&colselected)){
+		printf("nodo seleccionado %d %d \n", filselected, colselected);
+		printf("color seleccionado %d \n", seleccionarColor(&n,filselected,colselected));
+		printf("esta resuelto? %d \n", isResuelto(&n));
+	}
 	printNodoBusqueda(&n);
 	return 0;
 }

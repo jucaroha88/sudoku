@@ -39,7 +39,7 @@
 
 #define mat_to_cuad_n(fila,columna) (((fila)/3)*3+((columna)/3))
 #define mat_to_cuad_i(fila,columna) (((fila)%3)*3+((columna)%3))
-#define cuad_to_fila(n,i) ((n)/3+(i)/3)
+#define cuad_to_fila(n,i) (((n)/3)*3+(i)/3)
 #define cuad_to_columna(n,i) (((n)%3)*3+((i)%3))
 
 typedef int bool;
@@ -63,7 +63,6 @@ struct NodoBusqueda{
 };
 typedef struct NodoBusqueda NodoBusqueda;
 
-//TODO hacer procedure para imprimir NodoBusqueda
 void printNodoBusqueda(NodoBusqueda *nodo){
 	int i,j;
 	printf("##TABLERO#\n");
@@ -126,8 +125,45 @@ void inicializarMatrizAdyacencia(){
 			cuadr=mat_to_cuad_n(vec_to_fila(nodo),vec_to_columna(nodo));
 			for(i=0;i<_SUDOK_ELEMSCUADRANTE;i++){
 				otrnodo=mat_to_vec(cuad_to_fila(cuadr,i),cuad_to_columna(cuadr,i));
+				matriz_adyacencia[nodo][otrnodo]=true;
 			}
 		}
+	}
+}
+
+/* adyacentesAfectadosYAfectantes
+ * funcion utilitaria de debug para comprobar los arcos de la matriz de adyacencia
+ * recibe como parametro un nodo e imprime dos matrices que representan los nodos del grafo
+ * a los que este apunta, y los que apuntan a este respectivamente
+ *
+ * IMPORTANTE: esta funcion depende de las macros de conversion de tipo
+ * 				de direccionamientos.
+ */
+void imprimirAdyacentesApuntadosYApuntadores(int fila, int columna){
+	int fil,col;
+	printf("APUNTADOS\n");
+	for(fil=0;fil<_SUDOK_FILAS;fil++){
+		if(!(fil%3)) printf("\n");
+		for(col=0;col<_SUDOK_COLUMNAS;col++){
+			if(!(col%3)) printf(" "); printf(" ");
+			if(matriz_adyacencia[mat_to_vec(fila,columna)][mat_to_vec(fil,col)])
+				printf("X");
+			else
+				printf("O");
+		}
+		printf("\n");
+	}
+	printf("APUNTADORES\n");
+	for(fil=0;fil<_SUDOK_FILAS;fil++){
+		if(!(fil%3)) printf("\n");
+		for(col=0;col<_SUDOK_COLUMNAS;col++){
+			if(!(col%3)) printf(" "); printf(" ");
+			if(matriz_adyacencia[mat_to_vec(fil,col)][mat_to_vec(fila,columna)])
+				printf("X");
+			else
+				printf("O");
+		}
+		printf("\n");
 	}
 }
 
@@ -141,11 +177,16 @@ void imprimirMatrizAdyacencia(){
 	}
 }
 
+/* coloca que fila,columna,color ya fue recorrido */
+inline void setRecorrido(int fila,int columna,color color, NodoBusqueda *nodo){
+	nodo->recorrido[fila][columna][color]=true;
+}
 
+
+/* asignarColor asigna el color y propaga, pero NO marca la casilla-color como recorrido (para eso usar setRecorrido) */
 void asignarColor(int fila, int columna, color color, NodoBusqueda *nodo){
 	int nronodo,i;
 	nodo->tablero[fila][columna]=color;
-	nodo->recorrido[fila][columna][color]=true;
 	//propagamos (por ahora solo comprobacion hacia adelante... mas adelante cambiamos esto por un algoritmo de propagacion)
 	//usando la matriz de adjacencia
 	nronodo=mat_to_vec(fila,columna);
@@ -182,6 +223,95 @@ NodoBusqueda nodoInicial(int tablero[_SUDOK_FILAS][_SUDOK_COLUMNAS]){
 		}
 	}
 	return newnodo;
+}
+
+/* TODO
+ * seleccionarCasilla. modifica los parametros fila y columna, indicando cual es la siguiente casilla a explorar
+ * retorna true en caso de exito o false en caso de no encontrar ninguno
+ *
+ * se utilizara la heuristica de "minimos valores restantes" o "variable mas restringida" o "primero en fallar"
+ * en otras palabras el que tenga menos colores asignables
+ */
+
+bool seleccionarCasilla(NodoBusqueda *nodo, int *fila, int *columna){
+	int minfila,mincolumna,mincolores,
+	fil, //iterador de fila
+	col, //iterador de columna
+	cor, //iterador de color
+	corcount; //contador de colores
+	mincolores=_SUDOK_COLORES+1; //ninguna casilla deberia tener mas de _SUDOK_COLORES colores
+	for(fil=0;fil<_SUDOK_FILAS;fil++){
+		for(col=0;col<_SUDOK_COLUMNAS;col++){
+			if(nodo->tablero[fil][col] != 0) //si la casilla ya esta asignada no se considera
+				continue;
+			corcount=0;
+			for(cor=1;cor<=_SUDOK_COLORES;cor++){
+				if(nodo->asignable[fil][col][cor] == true) corcount++;
+			}
+			if(corcount<mincolores){
+				mincolores=corcount;
+				minfila=fil;
+				mincolumna=col;
+			}
+		}
+	}
+	if(mincolores==_SUDOK_COLORES+1)
+		return false;
+	else{
+		*fila=minfila;
+		*columna=mincolumna;
+		return true;
+	}
+}
+
+/* seleccionarColor
+ * devuelve el siguiente color a ser explorado, o 0 en caso de no encontrar ninguna
+ * se utilizara una heuristica de "valor menos restringido"
+ *
+ * TODO implementar la heuristica de "valor menos restringido" por el momento selecciona el primer valor seleccionable
+ */
+
+color seleccionarColor(NodoBusqueda *nodo, int fila, int columna){
+	int color;
+	for(color=1;color<=_SUDOK_COLORES;color++){
+		if(nodo->asignable[fila][columna][color] == true){
+			return color;
+		}
+	}
+	return 0;
+}
+
+/* isResuelto
+ * devuelve
+ * 		1: si el tablero esta resuelto
+ * 		0: si todavia no lo esta
+ * 		-1: si es insoluble por esta via (existe alguna casilla vacia sin colores asignables)
+ */
+int isResuelto(NodoBusqueda *nodo){
+	int fil, col, cor, corcount;
+	//checkeamos si todavia es soluble
+	for(fil=0;fil<_SUDOK_FILAS;fil++){
+		for(col=0;col<_SUDOK_COLUMNAS;col++){
+			if(nodo->tablero[fil][col] != 0) //si la casilla ya esta asignada no se considera
+				continue;
+			corcount=0;
+			for(cor=1;cor<=_SUDOK_COLORES;cor++){
+				if(nodo->asignable[fil][col][cor] == true) corcount++;
+			}
+			if(corcount==0)
+				return -1;
+		}
+	}
+	//buscamos alguna casilla vacia (tablero incompleto)
+	for(fil=0;fil<_SUDOK_FILAS;fil++){
+		for(col=0;col<_SUDOK_COLUMNAS;col++){
+			if(nodo->tablero[fil][col]==0){
+				return 0;
+			}
+		}
+	}
+	//si no hay casilla incompleta entonces esta completo/resuelto
+	return 1;
 }
 
 #endif /* NODO_H_ */
