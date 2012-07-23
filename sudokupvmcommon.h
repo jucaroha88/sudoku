@@ -8,6 +8,9 @@
 #ifndef SUDOKUPVMCOMMON_H_
 #define SUDOKUPVMCOMMON_H_
 
+#define _TIPOMSG_NODOBUSQUEDA 1
+#define _TIPOMSG_EXITOFRACASO 2
+
 #include "sudokupsr.h"
 
 int pvm_pkNodoBusqueda(NodoBusqueda *nodo){
