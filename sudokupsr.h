@@ -13,7 +13,7 @@
 
 #include <glib.h>
 
-#define __DEBUG__SUDOK 1
+#define __DEBUG__SUDOK 0
 
 #define true 1
 #define false 0

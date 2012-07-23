@@ -6,8 +6,19 @@
  */
 #include "sudokupsr.h"
 
-void printTarea(gpointer data, gpointer user_data){
+void foreachPrintTarea(gpointer data, gpointer user_data){
 	printNodoBusqueda((NodoBusqueda*)data);
+}
+
+void foreachResolverRecursivo(gpointer data, gpointer user_data){
+	NodoBusqueda *resul=NULL;
+	resul=resolverRecursivo(*((NodoBusqueda *)data));
+	if(resul){
+		printf("\nSOLUCION ENCONTRADA\n");
+		printNodoBusqueda(resul);
+	}else{
+		printf("\nSOLUCION NO ENCONTRADA\n");
+	}
 }
 
 int main(int argc, char **argv){
@@ -44,7 +55,8 @@ int main(int argc, char **argv){
 
 	tareas=generarTareas(n,10);
 
-	g_list_foreach(tareas,printTarea,NULL);
+	//g_list_foreach(tareas,printTarea,NULL);
+	g_list_foreach(tareas,foreachResolverRecursivo,NULL);
 
 //	resultado=resolverRecursivo(n);
 //	printNodoBusqueda(resultado);
