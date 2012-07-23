@@ -9,6 +9,9 @@
 #define SUDOKUPSR_H_
 
 #include <stdio.h>
+#include <stdlib.h>
+
+#define __DEBUG__SUDOK 1
 
 #define true 1
 #define false 0
@@ -78,25 +81,31 @@ void printNodoBusqueda(NodoBusqueda *nodo){
 	}
 	printf("#RECORRIDO\n");
 	for(i=0;i<_ADJAC_ANCHO;i++){
-		printf("#%d. ",i);
+		printf("#%d.",i);
 		for(j=1;j<_SUDOK_COLORES+1;j++){
 			if(nodo->recorrido[vec_to_fila(i)][vec_to_columna(i)][j]==true){
 				printf("%d",j);
 			}
 		}
-		printf("\n");
+		if(i%15||i==0)
+			printf(" ");
+		else
+			printf("\n");
 	}
-	printf("#ASIGNABLE\n");
+	printf("\n#ASIGNABLE\n");
 	for(i=0;i<_ADJAC_ANCHO;i++){
-		printf("#%d. ",i);
+		printf("#%d.",i);
 		for(j=1;j<_SUDOK_COLORES+1;j++){
 			if(nodo->asignable[vec_to_fila(i)][vec_to_columna(i)][j]==true){
 				printf("%d",j);
 			}
 		}
-		printf("\n");
+		if(i%15||i==0)
+			printf(" ");
+		else
+			printf("\n");
 	}
-	printf("##########");
+	printf("##########\n");
 }
 
 void inicializarMatrizAdyacencia(){
@@ -225,6 +234,16 @@ NodoBusqueda nodoInicial(int tablero[_SUDOK_FILAS][_SUDOK_COLUMNAS]){
 	return newnodo;
 }
 
+/* casillaIsRecorrible devuelve true si la casilla tiene caminos por recorrer, false en casi de que no */
+inline bool casillaIsRecorrible(NodoBusqueda *nodo, int fila, int columna){
+	int i;
+	for(i=1;i<=_SUDOK_COLORES;i++){
+		if(nodo->recorrido[fila][columna][i] == false)
+			return true;
+	}
+	return false;
+}
+
 /* TODO
  * seleccionarCasilla. modifica los parametros fila y columna, indicando cual es la siguiente casilla a explorar
  * retorna true en caso de exito o false en caso de no encontrar ninguno
@@ -243,6 +262,8 @@ bool seleccionarCasilla(NodoBusqueda *nodo, int *fila, int *columna){
 	for(fil=0;fil<_SUDOK_FILAS;fil++){
 		for(col=0;col<_SUDOK_COLUMNAS;col++){
 			if(nodo->tablero[fil][col] != 0) //si la casilla ya esta asignada no se considera
+				continue;
+			else if(casillaIsRecorrible(nodo,fil,col)==false) //si la casilla no tiene caminos por recorrer tampoco se considera
 				continue;
 			corcount=0;
 			for(cor=1;cor<=_SUDOK_COLORES;cor++){
@@ -314,4 +335,67 @@ int isResuelto(NodoBusqueda *nodo){
 	return 1;
 }
 
-#endif /* NODO_H_ */
+/* resolver: devuelve un puntero a un NodoBusqueda creado con malloc que representa la solucion,
+ * 				o null en caso de no encontrarla
+ *
+ * 			 IMPORTANTE: el NodoBusqueda devuelto debe ser liberado segun sea necesario
+ */
+NodoBusqueda *resolverRecursivo(NodoBusqueda nodo){
+	int filselec,colselec, corselec;
+	int er;
+	NodoBusqueda *retor;
+	// COMPROBAR SI ES SOLUCION
+	er=isResuelto(&nodo);
+	if(er==1){ //solucion encontrada
+		NodoBusqueda *solu=malloc(sizeof(NodoBusqueda));
+		*solu=nodo;
+		return solu;
+	}else if(er==-1){ //camino sin salida
+		return NULL;
+	}
+
+#if __DEBUG__SUDOK >=1
+	printf("expandiendo nodo, con valor de isResuelto %d :\n", er);
+	printNodoBusqueda(&nodo);
+#endif
+
+	// SELECCIONAR CASILLA
+	if(!seleccionarCasilla(&nodo,&filselec,&colselec)){
+		/* ERROR esto no deberia de pasar. Si un nodo no esta completo,
+		 * y no tiene casillas seleccionables, se podria no llegar a la solucion, si es que la solucion esta en esta rama.
+		 * probablemente hay algun problema con la mascara de NodoBusqueda.recorrido
+		 */
+		fprintf(stderr,"ERROR resolverRecursivo. No se puede llegar a asignar todas las casillas. Probable error con la mascara de NodoBusqueda.recorrido");
+		exit(1);
+	}
+
+#if __DEBUG__SUDOK >=1
+	printf("casilla seleccionada %d %d\n", filselec, colselec);
+#endif
+
+	//mientras haya colores por recorrer en la casilla, asignar color y hacer la recursion
+	while(casillaIsRecorrible(&nodo,filselec,colselec)==true){
+		// SELECCIONAR COLOR
+		if(!(corselec=seleccionarColor(&nodo,filselec,colselec))){
+			fprintf(stderr, "ERROR resolverRecursivo. No se pudo asignar color a una casilla seleccionada");
+			exit(1);
+		}
+
+#if __DEBUG__SUDOK >=1
+		printf("color seleccionado %d\n",corselec);
+#endif
+		//colocamos como recorrido
+		setRecorrido(filselec,colselec,corselec,&nodo);
+		//asignamos valor (es importante que esto se haga despues de setRecorrido)
+		asignarColor(filselec,colselec,corselec,&nodo);
+		//hacemos la recursion pasando el nodo por valor
+		if((retor=resolverRecursivo(nodo))){
+			return retor;
+		}
+	}
+	return NULL;
+}
+
+
+
+#endif /* SUDOKUPSR_H_ */

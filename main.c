@@ -18,22 +18,21 @@ int main(int argc, char **argv){
 												{0,0,0,7,5,0,0,0,0}
 											};
 
-	NodoBusqueda n;
-	int filselected,colselected;
+	NodoBusqueda n, *resultado;
 
 
 	inicializarMatrizAdyacencia();
-	imprimirMatrizAdyacencia();
-
-	imprimirAdyacentesApuntadosYApuntadores(4,5);
 
 	n = nodoInicial(ej);
 
-	if(seleccionarCasilla(&n,&filselected,&colselected)){
-		printf("nodo seleccionado %d %d \n", filselected, colselected);
-		printf("color seleccionado %d \n", seleccionarColor(&n,filselected,colselected));
-		printf("esta resuelto? %d \n", isResuelto(&n));
+	//printNodoBusqueda(&n);
+
+	printf("iniciando busqueda\n");
+	resultado=resolverRecursivo(n);
+	printf("busqueda finalizada\n");
+	if(resultado){
+		printNodoBusqueda(resultado);
 	}
-	printNodoBusqueda(&n);
+
 	return 0;
 }
