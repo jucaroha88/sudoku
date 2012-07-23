@@ -11,6 +11,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <glib.h>
+
 #define __DEBUG__SUDOK 1
 
 #define true 1
@@ -186,13 +188,22 @@ void imprimirMatrizAdyacencia(){
 	}
 }
 
-/* coloca que fila,columna,color ya fue recorrido */
+/* coloca que fila,columna,color ya fue recorrido
+ * IMPORTANTE: es importante que si esto se usa con asignarColor, setRecorrido se use antes que asignarColor,
+ * 				para que el color aparezca ya recorrido y no se repita */
 inline void setRecorrido(int fila,int columna,color color, NodoBusqueda *nodo){
 	nodo->recorrido[fila][columna][color]=true;
 }
 
+inline void setNoRecorrido(int fila, int columna, color color, NodoBusqueda *nodo){
+	nodo->recorrido[fila][columna][color]=false;
+}
 
-/* asignarColor asigna el color y propaga, pero NO marca la casilla-color como recorrido (para eso usar setRecorrido) */
+
+/* asignarColor asigna el color y propaga, pero NO marca la casilla-color como recorrido (para eso usar setRecorrido)
+ * IMPORTANTE: es importante que si esto se usa con setRecorrido, setRecorrido se use antes que asignarColor,
+ * 				para que el color aparezca ya recorrido y no se repita
+ * */
 void asignarColor(int fila, int columna, color color, NodoBusqueda *nodo){
 	int nronodo,i;
 	nodo->tablero[fila][columna]=color;
@@ -238,13 +249,13 @@ NodoBusqueda nodoInicial(int tablero[_SUDOK_FILAS][_SUDOK_COLUMNAS]){
 inline bool casillaIsRecorrible(NodoBusqueda *nodo, int fila, int columna){
 	int i;
 	for(i=1;i<=_SUDOK_COLORES;i++){
-		if(nodo->recorrido[fila][columna][i] == false)
+		if(nodo->recorrido[fila][columna][i] == false && nodo->asignable[fila][columna][i] == true)
 			return true;
 	}
 	return false;
 }
 
-/* TODO
+/*
  * seleccionarCasilla. modifica los parametros fila y columna, indicando cual es la siguiente casilla a explorar
  * retorna true en caso de exito o false en caso de no encontrar ninguno
  *
@@ -295,7 +306,7 @@ bool seleccionarCasilla(NodoBusqueda *nodo, int *fila, int *columna){
 color seleccionarColor(NodoBusqueda *nodo, int fila, int columna){
 	int color;
 	for(color=1;color<=_SUDOK_COLORES;color++){
-		if(nodo->asignable[fila][columna][color] == true){
+		if(nodo->asignable[fila][columna][color] == true && nodo->recorrido[fila][columna][color] == false){
 			return color;
 		}
 	}
@@ -335,6 +346,60 @@ int isResuelto(NodoBusqueda *nodo){
 	return 1;
 }
 
+/* expandirNodoBusqueda genera, a partir de un nodo, seleccionando una casilla, una lista de nodos
+ * que corresponden a todas las asignaciones de colores a esas casillas
+ */
+GList *expandirNodoBusqueda(NodoBusqueda nodo){
+	int filselect, colselect, corselect;
+	NodoBusqueda *tempnodoptr;
+	GList *lista=NULL;
+	if(isResuelto(&nodo)){
+		tempnodoptr = malloc(sizeof(NodoBusqueda));
+		*tempnodoptr=nodo;
+		lista=g_list_append(lista,tempnodoptr);
+		return lista;
+	}
+	if(!seleccionarCasilla(&nodo,&filselect, &colselect)){
+		fprintf(stderr,"ERROR. expandirNodoBusqueda. no se pudo seleccionarCasilla");
+		exit(1);
+	}
+	while(casillaIsRecorrible(&nodo,filselect,colselect)){
+		corselect=seleccionarColor(&nodo,filselect,colselect);
+		setRecorrido(filselect,colselect,corselect,&nodo);
+		//duplicar, asignar, y poner en lista
+		tempnodoptr = malloc(sizeof(NodoBusqueda));
+		*tempnodoptr=nodo;
+		asignarColor(filselect,colselect,corselect,tempnodoptr);
+		lista=g_list_append(lista,tempnodoptr);
+	}
+	return lista;
+}
+
+
+/* generarTareas genera, a partir de un nodo inicial, y con un numero minimo de tareas
+ * especificado como parametro, una lista con nodos que representan
+ * ramas distintas en la resolucion del problema
+ */
+GList *generarTareas(NodoBusqueda nodo_inicial, int min_tareas){
+	GList *frontera=NULL, *primero, *expansion;
+	NodoBusqueda *nodoptr;
+	nodoptr = malloc(sizeof(NodoBusqueda));
+	*nodoptr=nodo_inicial;
+	frontera=g_list_append(frontera, nodoptr);
+	while(g_list_length(frontera) < min_tareas){
+		primero=g_list_first(frontera);
+		nodoptr=primero->data;
+		if(isResuelto(nodoptr))
+			break;
+		frontera=g_list_delete_link(frontera,primero);
+		expansion=expandirNodoBusqueda(*nodoptr);
+		free(nodoptr);
+		frontera=g_list_concat(expansion,frontera);
+	}
+	return frontera;
+}
+
+
 /* resolver: devuelve un puntero a un NodoBusqueda creado con malloc que representa la solucion,
  * 				o null en caso de no encontrarla
  *
@@ -343,7 +408,7 @@ int isResuelto(NodoBusqueda *nodo){
 NodoBusqueda *resolverRecursivo(NodoBusqueda nodo){
 	int filselec,colselec, corselec;
 	int er;
-	NodoBusqueda *retor;
+	NodoBusqueda *retor, tempnodo;
 	// COMPROBAR SI ES SOLUCION
 	er=isResuelto(&nodo);
 	if(er==1){ //solucion encontrada
@@ -386,10 +451,14 @@ NodoBusqueda *resolverRecursivo(NodoBusqueda nodo){
 #endif
 		//colocamos como recorrido
 		setRecorrido(filselec,colselec,corselec,&nodo);
-		//asignamos valor (es importante que esto se haga despues de setRecorrido)
-		asignarColor(filselec,colselec,corselec,&nodo);
+		/*asignamos color (es importante que esto se haga despues de setRecorrido)
+					es importante que la asignacion se haga sobre una copia del nodo,
+					para que en una proxima iteracion los colores de NodoBusqueda.asignable no se queden marcados */
+					//TODO implementamos esto con una funcion "expandir" que devuelva una lista de GLib
+		tempnodo=nodo;
+		asignarColor(filselec,colselec,corselec,&tempnodo);
 		//hacemos la recursion pasando el nodo por valor
-		if((retor=resolverRecursivo(nodo))){
+		if((retor=resolverRecursivo(tempnodo))){
 			return retor;
 		}
 	}
